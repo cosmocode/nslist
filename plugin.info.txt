@@ -1,0 +1,7 @@
+base   nslist
+author Andreas Gohr
+email  andi@splitbrain.org
+date   2009-12-16
+name   Namespace Listing
+desc   List all pages in a given namespace
+url    http://www.dokuwiki.org/plugin:nslist

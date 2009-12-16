@@ -1,7 +1,7 @@
 <?php
 /**
  * Info Plugin: Displays information about various DokuWiki internals
- * 
+ *
  * @license    GPL 2 (http://www.gnu.org/licenses/gpl.html)
  * @author     Andreas Gohr <andi@splitbrain.org>
  */
@@ -16,21 +16,7 @@ require_once(DOKU_INC.'inc/search.php');
  * All DokuWiki plugins to extend the parser/rendering mechanism
  * need to inherit from this class
  */
-class syntax_plugin_list extends DokuWiki_Syntax_Plugin {
-
-    /**
-     * return some info
-     */
-    function getInfo(){
-        return array(
-            'author' => 'Andreas Gohr',
-            'email'  => 'andi@splitbrain.org',
-            'date'   => '2006-01-11',
-            'name'   => 'List Plugin',
-            'desc'   => 'Lists all pages in a given namespace',
-            'url'    => 'http://wiki.splitbrain.org/plugin:list',
-        );
-    }
+class syntax_plugin_nslist extends DokuWiki_Syntax_Plugin {
 
     /**
      * What kind of syntax are we?
@@ -38,7 +24,7 @@ class syntax_plugin_list extends DokuWiki_Syntax_Plugin {
     function getType(){
         return 'substition';
     }
-   
+
     /**
      * What about paragraphs?
      */
@@ -48,7 +34,7 @@ class syntax_plugin_list extends DokuWiki_Syntax_Plugin {
 
     /**
      * Where to sort in?
-     */ 
+     */
     function getSort(){
         return 302;
     }
@@ -58,7 +44,7 @@ class syntax_plugin_list extends DokuWiki_Syntax_Plugin {
      * Connect pattern to lexer
      */
     function connectTo($mode) {
-        $this->Lexer->addSpecialPattern('{{list>[^}]+}}',$mode,'plugin_list');
+        $this->Lexer->addSpecialPattern('{{nslist>[^}]*}}',$mode,'plugin_nslist');
     }
 
 
@@ -66,59 +52,86 @@ class syntax_plugin_list extends DokuWiki_Syntax_Plugin {
      * Handle the match
      */
     function handle($match, $state, $pos, &$handler){
-        $match = substr($match,7,-2); //strip {{list> from start and }} from end
+        global $ID;
+        $match = substr($match,9,-2); //strip {{nslist> from start and }} from end
 
-        // get title if given
-        list($ns,$title) = explode('|',$match);
-        $title = trim($title);
+        $conf = array(
+            'ns'    => getNS($ID),
+            'depth' => 1,
+            'date'  => 1,
+            'dsort' => 1
+        );
 
-        // get alignment
-        if(preg_match('/^(\t|  ).*(\t|  )$/',$ns)){
-            $align = ' mediacenter'; //FIXME doesn't work
-        }elseif(preg_match('/^(\t|  )/',$ns)){
-            $align = ' mediaright';
-        }elseif(preg_match('/(\t|  )$/',$ns)){
-            $align = ' medialeft';
-        }else{
-            $align = '';
-        }
+        list($ns,$params) = explode(' ',$match,2);
+        $ns = cleanID($ns);
+
+        if(preg_match('/\bnodate\b/i',$params))  $conf['date'] = 0;
+        if(preg_match('/\bnodsort\b/i',$params)) $conf['dsort'] = 0;
+        if(preg_match('/\b(\d+)\b/i',$params,$m))   $conf['depth'] = $m[1];
+        if($ns) $conf['ns'] = $ns;
+
+        $conf['dir'] = str_replace(':','/',$conf['ns']);
 
         // prepare data
-        return array( 'ns'    => str_replace(':','/',cleanID($ns)),
-                      'title' => $title,
-                      'align' => $align,  
-                    );
+        return $conf;
     }
 
     /**
      * Create output
      */
-    function render($format, &$renderer, $data) {
+    function render($format, &$R, $data) {
         global $conf;
         global $lang;
         if($format != 'xhtml') return false;
 
+
+        $opts = array(
+            'depth'     => $data['depth'],
+            'listfiles' => true,
+            'listdirs'  => false,
+            'pagesonly' => true,
+            'meta'      => true
+        );
+
         // read the directory
         $result = array();
-        search(&$result,$conf['datadir'],'search_list','',$data['ns']);
+        search(&$result,$conf['datadir'],'search_universal',$opts,$data['dir']);
 
-        $renderer->doc .= '<div class="listplugin'.$data['align'].'">';
-
-        if($data['title']){
-            $renderer->doc .= '<div>'.htmlspecialchars($data['title']).'</div>';
-        }
-
-        if(!count($result)){
-            $renderer->doc .= '<span>'.$lang['nothingfound'].'</span>';
+        if($data['dsort']){
+            usort($result,array($this,'_sort_date'));
         }else{
-            $renderer->doc .= '<ul>';
-            $renderer->doc .= html_buildlist($result,'','html_list_index');
-            $renderer->doc .= '</ul>';
+            usort($result,array($this,'_sort_page'));
         }
 
-        $renderer->doc .= '</div>';
+        $R->listu_open();
+        foreach($result as $item){
+            $R->listitem_open(1);
+            $R->listcontent_open();
+            $R->internallink(':'.$item['id']);
+            if($data['date']) $R->cdata(' '.dformat($item['mtime']));
+
+            $R->listcontent_close();
+            $R->listitem_close();
+        }
+        $R->listu_close();
+
         return true;
     }
+
+    function _sort_page($a,$b){
+        return strcmp($a['id'],$b['id']);
+    }
+
+    function _sort_date($a,$b){
+        if($b['mtime'] < $a['mtime']){
+            return -1;
+        }elseif($b['mtime'] > $a['mtime']){
+            return 1;
+        }else{
+            return strcmp($a['id'],$b['id']);
+        }
+    }
+
 }
 
 //Setup VIM: ex: et ts=4 enc=utf-8 :
