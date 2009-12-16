@@ -1,0 +1,19 @@
+div.listplugin div {
+  font-weight: bold;
+  padding: 0 0.4em;
+  margin: 0;
+}
+
+div.listplugin.mediaright {
+  margin: 0 1em 0.5em 2em;
+}
+
+
+div.listplugin.medialeft {
+  margin: 0 2em 0.5em 1em;
+}
+
+
+div.listplugin ul {
+  margin-right: 0.5em;
+}
