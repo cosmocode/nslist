@@ -95,7 +95,7 @@ class syntax_plugin_nslist extends DokuWiki_Syntax_Plugin {
 
         // read the directory
         $result = array();
-        search(&$result,$conf['datadir'],'search_universal',$opts,$data['dir']);
+        search($result,$conf['datadir'],'search_universal',$opts,$data['dir']);
 
         if($data['dsort']){
             usort($result,array($this,'_sort_date'));
