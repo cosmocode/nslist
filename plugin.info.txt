@@ -1,7 +1,7 @@
 base   nslist
 author Andreas Gohr
-email  andi@splitbrain.org
-date   2012-11-08
+email  dokuwiki@cosmocode.de
+date   2015-02-26
 name   Namespace Listing
 desc   List all pages in a given namespace
 url    http://www.dokuwiki.org/plugin:nslist
